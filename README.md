@@ -26,6 +26,7 @@ cs2MatchSite/
 │   └── 📄 tasks.json             # VS Code workspace tasks
 ├── 📄 index.html                 # Home page (kept at root for GitHub Pages)
 ├── 📄 history.html               # Completed tournament editions archive
+├── 📄 registration.html          # Tournament registration information
 ├── 📄 series.html                # Edition match list and tournament awards
 ├── 📄 match.html                 # Match and player-statistics details
 ├── 📄 about.html                 # About page
