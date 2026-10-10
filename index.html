@@ -16,7 +16,7 @@
                 </h1>
             </a>
             <nav>
-                <a href="#history">历史战绩</a>
+                <a href="history.html">历届赛事</a>
                 <a href="about.html">关于我们</a>
                 <a href="faq.html">FAQ</a>
             </nav>
@@ -24,6 +24,14 @@
     </header>
 
     <main class="container">
+        <section class="home-hero" aria-label="Aussie Laozi Cup S2">
+            <div class="home-hero-content">
+                <p class="home-hero-eyebrow">AUSSIE LAOZI CUP</p>
+                <h2>Aussie Laozi Cup S2 火热筹备中</h2>
+                <a class="home-hero-button" href="series.html?id=s2">立即查看</a>
+            </div>
+        </section>
+
         <section id="upcoming">
             <h2>🔥 最新赛事</h2>
             <div id="upcoming-series" class="series-grid">
@@ -33,7 +41,7 @@
 
         <section id="history">
             <h2>🏆 历届赛事</h2>
-            <div id="series-list" class="series-grid">
+            <div id="series-list" class="series-grid" data-series-limit="1">
                 <p class="loading">正在加载赛事届次...</p>
             </div>
         </section>

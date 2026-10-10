@@ -225,7 +225,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const isSeries = match.format === 'BO3' || maps.length > 1;
             const backUrl = series
                 ? `series.html?id=${encodeURIComponent(series.id)}`
-                : 'index.html#history';
+                : 'history.html';
 
             if (!isSeries) {
                 const singleMap = maps[0] || {

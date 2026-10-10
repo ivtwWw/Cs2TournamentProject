@@ -6,7 +6,7 @@ A clean, lightweight, and modern web application designed to track and display C
 
 ## 🚀 Current Features
 
-- **Series-based home page:** Upcoming and completed tournament editions (S1, S2, etc.) are shown separately.
+- **Series archive:** The home page shows upcoming editions and the latest completed edition; all completed editions are listed on a dedicated archive page.
 - **Edition and match details:** Each edition has its own match list; individual BO1/BO3 pages show scores, maps, rosters, and available player statistics.
 - **Player statistics:** Kills, deaths, assists, K/D, headshot percentage, ADR, and MVP count are displayed when present in the saved match data. BO3 overview totals are aggregated from map data.
 - **Edition information:** Event time, schedule, champion, captain, MVP, champion roster, FACEIT profile links, and avatars can be recorded for each edition.
@@ -25,6 +25,7 @@ cs2MatchSite/
 ├── 📁 .vscode/
 │   └── 📄 tasks.json             # VS Code workspace tasks
 ├── 📄 index.html                 # Home page (kept at root for GitHub Pages)
+├── 📄 history.html               # Completed tournament editions archive
 ├── 📄 series.html                # Edition match list and tournament awards
 ├── 📄 match.html                 # Match and player-statistics details
 ├── 📄 about.html                 # About page
@@ -34,7 +35,7 @@ cs2MatchSite/
 │   ├── 📁 css/
 │   │   └── 📄 style.css          # Site styles
 │   └── 📁 js/
-│       ├── 📄 script.js          # Home page series cards
+│       ├── 📄 script.js          # Home and archive series cards
 │       ├── 📄 series.js          # Edition page and awards rendering
 │       ├── 📄 match.js           # Match details and statistics
 │       └── 📄 about.js           # Markdown content rendering
@@ -49,7 +50,7 @@ cs2MatchSite/
 └── 📄 README.md                  # Project documentation
 ```
 
-The home page displays upcoming editions, completed editions, and a Hall of Fame link. The top-left ALTV wordmark expands to “Aussie Laozi TV” on hover or keyboard focus. The Hall of Fame currently opens a standalone placeholder page.
+The home page displays upcoming editions and the latest completed edition, with a separate page for the full archive. The top-left ALTV wordmark expands to “Aussie Laozi TV” on hover or keyboard focus. The Hall of Fame currently opens a standalone placeholder page.
 
 Tournament data is stored in the `series[]` array in `data/matches.json`. Each edition contains `id`, `title`, `status`, `description`, and `matches[]`. The optional `eventTime` and `schedule` fields are shown on the home page and edition details. When either field is set, the description line displays the edition title. Completed editions can also record `championTeam`, `captain`, `mvp`, and `championPlayers`.
 

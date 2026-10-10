@@ -286,7 +286,7 @@ document.addEventListener("DOMContentLoaded", () => {
             `).join('');
 
             container.innerHTML = `
-                <a class="back-link" href="index.html#history">← 返回赛事列表</a>
+                <a class="back-link" href="history.html">← 返回历届赛事</a>
                 <section class="series-page-heading">
                     <p class="series-status status-${escapeHtml(series.status || 'completed')}">
                         ${series.status === 'upcoming' ? '即将开始' : series.status === 'active' ? '进行中' : '已结束'}

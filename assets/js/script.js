@@ -118,18 +118,33 @@ document.addEventListener("DOMContentLoaded", () => {
                 `;
             }).join('');
 
-            upcomingContainer.innerHTML = upcoming.length
-                ? renderSeries(upcoming)
-                : '<p class="empty-state">暂时没有即将开始或进行中的赛事。</p>';
-            historyContainer.innerHTML = history.length
-                ? renderSeries(history)
-                : '<p class="empty-state">暂无已结束的赛事。</p>';
+            if (upcomingContainer) {
+                upcomingContainer.innerHTML = upcoming.length
+                    ? renderSeries(upcoming)
+                    : '<p class="empty-state">暂时没有即将开始或进行中的赛事。</p>';
+            }
+            if (historyContainer) {
+                const limit = Number(historyContainer.dataset.seriesLimit);
+                const visibleHistory = Number.isInteger(limit) && limit > 0
+                    ? history.slice(0, limit)
+                    : history;
+                historyContainer.innerHTML = visibleHistory.length
+                    ? renderSeries(visibleHistory)
+                    : '<p class="empty-state">暂无已结束的赛事。</p>';
+            }
             revealLoadedAvatars(document);
         })
         .catch((error) => {
             console.error('加载系列赛数据失败:', error);
-            document.getElementById('upcoming-series').innerHTML =
-                '<p class="error-message">赛事数据加载失败，请稍后重试。</p>';
-            document.getElementById('series-list').innerHTML = '';
+            const upcomingContainer = document.getElementById('upcoming-series');
+            const historyContainer = document.getElementById('series-list');
+            if (upcomingContainer) {
+                upcomingContainer.innerHTML =
+                    '<p class="error-message">赛事数据加载失败，请稍后重试。</p>';
+            }
+            if (historyContainer) {
+                historyContainer.innerHTML =
+                    '<p class="error-message">赛事数据加载失败，请稍后重试。</p>';
+            }
         });
 });
