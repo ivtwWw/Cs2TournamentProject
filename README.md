@@ -34,6 +34,9 @@ cs2MatchSite/
 ├── 📁 assets/
 │   ├── 📁 css/
 │   │   └── 📄 style.css          # Site styles
+│   ├── 📁 images/
+│   │   ├── 📄 default-avatar.svg # Placeholder shown when a player has no avatar
+│   │   └── 📁 players/            # Saved player avatar image snapshots
 │   └── 📁 js/
 │       ├── 📄 script.js          # Home and archive series cards
 │       ├── 📄 series.js          # Edition page and awards rendering
@@ -44,6 +47,7 @@ cs2MatchSite/
 ├── 📁 tools/
 │   ├── 📄 faceit_sync.py         # FACEIT match data sync helpers
 │   └── 📄 manage_matches.py      # Local match management menu
+├── 📄 requirements.txt           # Python dependencies for FACEIT tools
 ├── 📁 docs/
 │   ├── 📄 about.md               # Editable About Us content
 │   └── 📄 changelog.md           # Change history
@@ -84,6 +88,13 @@ The About page content is stored in `docs/about.md`. Edit this Markdown file to 
 
 ## FACEIT Data Sync Setup
 
+Install the Python dependency before running the FACEIT tools:
+
+```powershell
+python -m pip install -r requirements.txt
+```
+
+python -m tools.manage_matches  
 `tools/faceit_sync.py` does not store an API key in source code. Set the `FACEIT_API_KEY` environment variable in the current terminal session before running the script:
 
 ### Windows PowerShell
@@ -110,6 +121,8 @@ If the FACEIT link only represents one map, choose the BO3 option to manually co
 
 Run the sync script from the project root. It always reads and writes `data/matches.json`, regardless of the current working directory.
 
+Player avatars fetched from FACEIT are saved as image snapshots in `assets/images/players/`, and match data stores their relative paths. When editing championship awards, paste a FACEIT CDN image URL; the management tool downloads it before saving. The download accepts HTTPS images from `distribution.faceit-cdn.net`, validates the image format, and limits files to 5 MB. If a snapshot cannot be downloaded, the management operation reports the error rather than replacing the saved avatar. Older records may still contain remote avatar URLs; leaving an avatar field blank preserves that value, while entering its CDN URL again attempts to save a local snapshot.
+
 ### Local Match Management
 
 From the project root, run:
@@ -122,6 +135,6 @@ The management menu can list editions and matches, fetch and add BO1/BO3 matches
 
 To add or edit the event time and schedule shown on the home page, run the management menu and choose `5. Update edition information (status, event time, schedule)`, then select the edition. Event time accepts free-form text. Separate schedule stages with semicolons; they will appear on separate lines on the home-page edition card and edition details page. Leave a field blank to keep its current value, or enter `-` to clear it.
 
-After an edition is complete, run `python -m tools.manage_matches` and choose menu option `6` to record the champion, captain, and MVP. Enter the MVP’s tournament Rating manually; other statistics are aggregated from the edition’s synchronized map data. Champion roster members and FACEIT IDs are read from the final match data. The menu prompts for each roster member’s avatar URL. The home-page edition card shows the champion, captain, and MVP; the edition page shows the champion roster and the MVP’s full tournament statistics.
+After an edition is complete, run `python -m tools.manage_matches` and choose menu option `6` to record the champion, captain, and MVP. Enter the MVP’s tournament Rating manually; other statistics are aggregated from the edition’s synchronized map data. Champion roster members and FACEIT IDs are read from the final match data. The menu can save a local avatar snapshot from a FACEIT CDN image URL for each roster member. The home-page edition card shows the champion, captain, and MVP; the edition page shows the champion roster and the MVP’s full tournament statistics.
 
 To create S2 or a later edition, choose `Create edition` from the management menu and enter its ID (for example, `s2`), title, description, and status. When adding a match, select the edition it belongs to. Matches from S1, S2, and later editions are kept in separate lists.

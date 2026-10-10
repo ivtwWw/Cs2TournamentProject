@@ -9932,11 +9932,13 @@
         }
       ],
       "captain": {
-        "nickname": "Y0ungggggg"
+        "nickname": "Y0ungggggg",
+        "avatar": "assets/images/players/Y0ungggggg-a4dcfa291fcb0fd0.jpg"
       },
       "mvp": {
         "nickname": "S7evenX",
-        "rating": "1.52"
+        "rating": "1.52",
+        "avatar": "assets/images/players/S7evenX-c2652f074a76057c.jpg"
       },
       "championPlayers": [
         {
@@ -9952,12 +9954,12 @@
         {
           "nickname": "P0wer666",
           "playerId": "f0715c80-5678-4def-9b41-1d9a5177a2ec",
-          "avatar": "https://distribution.faceit-cdn.net/images/0d10a4d3-e6a6-49d4-8877-19f888e56f11.jpg"
+          "avatar": "assets/images/players/f0715c80-5678-4def-9b41-1d9a5177a2ec-1175d14a305ad92f.jpg"
         },
         {
           "nickname": "T0MMYsSHELBY",
           "playerId": "491866f8-4436-422a-b630-c5877fee7ec4",
-          "avatar": "https://distribution.faceit-cdn.net/images/5c76f5c9-44ae-4f00-b61a-127d020ae3c7.jpg?width=48&height=48&action=fit&type=webp"
+          "avatar": "assets/images/players/491866f8-4436-422a-b630-c5877fee7ec4-dc9a5f7b15cc4207.jpg"
         },
         {
           "nickname": "Y0ungggggg",

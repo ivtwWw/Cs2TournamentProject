@@ -7,14 +7,17 @@ document.addEventListener("DOMContentLoaded", () => {
         "'": '&#039;'
     }[character]));
 
+    const isSupportedAvatar = (value) =>
+        /^https:\/\/distribution\.faceit-cdn\.net\/images\/[A-Za-z0-9._/?=&%-]+$/i.test(value || '')
+        || /^assets\/images\/players\/[A-Za-z0-9_-]+\.(?:jpg|png|gif|webp)$/i.test(value || '');
+
     const renderAwardPerson = (person, label) => {
         const nickname = person?.nickname || '待登记';
-        const avatar = /^https?:\/\//i.test(person?.avatar || '') ? person.avatar : '';
-        const initials = Array.from(nickname).slice(0, 2).join('');
+        const avatar = isSupportedAvatar(person?.avatar) ? person.avatar : '';
         return `<span class="series-card-award-person">
             <strong>${label}</strong>
             ${person?.nickname ? `<span class="series-card-avatar">
-                <span class="series-card-avatar-fallback">${escapeHtml(initials)}</span>
+                <img class="series-card-avatar-fallback" src="assets/images/default-avatar.svg" alt="">
                 ${avatar ? `<img src="${escapeHtml(avatar)}" alt="">` : ''}
             </span>` : ''}
             <span>${escapeHtml(nickname)}</span>
@@ -43,7 +46,7 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     const revealLoadedAvatars = (root) => {
-        root.querySelectorAll('.series-card-avatar img').forEach((image) => {
+        root.querySelectorAll('.series-card-avatar img:not(.series-card-avatar-fallback)').forEach((image) => {
             const revealImage = () => {
                 image.classList.add('is-loaded');
                 image.previousElementSibling.classList.add('is-hidden');

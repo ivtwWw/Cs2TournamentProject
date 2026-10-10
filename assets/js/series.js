@@ -136,11 +136,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const renderAvatar = (player) => {
         const nickname = player.nickname || '选手';
-        const initials = Array.from(nickname).slice(0, 2).join('');
-        const avatar = /^https?:\/\//i.test(player.avatar || '') ? player.avatar : '';
+        const avatarValue = player.avatar || '';
+        const avatar = /^https:\/\/distribution\.faceit-cdn\.net\/images\/[A-Za-z0-9._/?=&%-]+$/i.test(avatarValue)
+            || /^assets\/images\/players\/[A-Za-z0-9_-]+\.(?:jpg|png|gif|webp)$/i.test(avatarValue)
+            ? avatarValue
+            : '';
         return `<span class="champion-avatar">
-            <span class="champion-avatar-fallback">${escapeHtml(initials)}</span>
-            ${avatar ? `<img src="${escapeHtml(avatar)}" alt="${escapeHtml(nickname)} 头像" loading="lazy">` : ''}
+            <img class="champion-avatar-fallback" src="assets/images/default-avatar.svg" alt="">
+            ${avatar ? `<img src="${escapeHtml(avatar)}" alt="${escapeHtml(nickname)} 头像" loading="lazy" hidden>` : ''}
         </span>`;
     };
 
@@ -241,13 +244,14 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     const revealLoadedAvatars = (root) => {
-        root.querySelectorAll('.champion-avatar img').forEach((image) => {
+        root.querySelectorAll('.champion-avatar img:not(.champion-avatar-fallback)').forEach((image) => {
             const revealImage = () => {
                 image.hidden = false;
                 const fallback = image.previousElementSibling;
                 if (fallback) fallback.hidden = true;
             };
             image.addEventListener('load', revealImage, { once: true });
+            image.addEventListener('error', () => image.remove(), { once: true });
             if (image.complete && image.naturalWidth) revealImage();
         });
     };

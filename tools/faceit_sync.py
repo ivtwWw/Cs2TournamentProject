@@ -1,13 +1,108 @@
+import hashlib
 import json
 import os
 import re
+import tempfile
+from functools import lru_cache
 from pathlib import Path
+from urllib.parse import urlparse
 
 import requests
 
 
 FACEIT_API_KEY_ENV = "FACEIT_API_KEY"
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 JSON_FILE = Path(__file__).resolve().parent.parent / "data" / "matches.json"
+AVATAR_DIRECTORY = PROJECT_ROOT / "assets" / "images" / "players"
+MAX_AVATAR_SIZE = 5 * 1024 * 1024
+
+
+@lru_cache(maxsize=512)
+def download_avatar(avatar_url, player_id):
+    """将 FACEIT 头像下载为不可变的本地图片快照，并返回站点内相对路径。"""
+    parsed_url = urlparse(avatar_url)
+    if (
+        parsed_url.scheme != "https"
+        or parsed_url.hostname != "distribution.faceit-cdn.net"
+        or parsed_url.username is not None
+        or parsed_url.password is not None
+        or not parsed_url.path.startswith("/images/")
+    ):
+        raise ValueError("头像地址必须是 FACEIT CDN 的 HTTPS 图片地址。")
+
+    response = None
+    try:
+        response = requests.get(
+            avatar_url,
+            timeout=20,
+            stream=True,
+            allow_redirects=False,
+        )
+        if response.status_code != 200:
+            raise RuntimeError(f"头像图片请求失败：HTTP {response.status_code}")
+
+        content_length = response.headers.get("Content-Length")
+        if content_length:
+            try:
+                if int(content_length) > MAX_AVATAR_SIZE:
+                    raise RuntimeError("头像图片超过 5 MB，未保存。")
+            except ValueError as error:
+                raise RuntimeError("头像图片响应包含无效的 Content-Length。") from error
+
+        chunks = []
+        size = 0
+        for chunk in response.iter_content(chunk_size=64 * 1024):
+            if not chunk:
+                continue
+            size += len(chunk)
+            if size > MAX_AVATAR_SIZE:
+                raise RuntimeError("头像图片超过 5 MB，未保存。")
+            chunks.append(chunk)
+    except requests.exceptions.RequestException as error:
+        raise RuntimeError(f"头像图片下载失败：{error}") from error
+    finally:
+        if response is not None:
+            response.close()
+
+    image_data = b"".join(chunks)
+    image_type = None
+    if image_data.startswith(b"\xff\xd8\xff"):
+        image_type = "jpg"
+    elif image_data.startswith(b"\x89PNG\r\n\x1a\n"):
+        image_type = "png"
+    elif image_data.startswith((b"GIF87a", b"GIF89a")):
+        image_type = "gif"
+    elif (
+        len(image_data) >= 12
+        and image_data[:4] == b"RIFF"
+        and image_data[8:12] == b"WEBP"
+    ):
+        image_type = "webp"
+    if not image_type:
+        raise RuntimeError("下载内容不是受支持的图片格式，未保存。")
+
+    image_hash = hashlib.sha256(image_data).hexdigest()[:16]
+    safe_player_id = re.sub(r"[^A-Za-z0-9_-]", "_", str(player_id or "player"))[:80]
+    filename = f"{safe_player_id}-{image_hash}.{image_type}"
+    destination = AVATAR_DIRECTORY / filename
+    AVATAR_DIRECTORY.mkdir(parents=True, exist_ok=True)
+    if not destination.exists():
+        temporary_path = None
+        try:
+            with tempfile.NamedTemporaryFile(
+                mode="wb",
+                dir=AVATAR_DIRECTORY,
+                delete=False,
+                suffix=".tmp",
+            ) as file:
+                file.write(image_data)
+                temporary_path = file.name
+            os.replace(temporary_path, destination)
+        finally:
+            if temporary_path and os.path.exists(temporary_path):
+                os.remove(temporary_path)
+
+    return destination.relative_to(PROJECT_ROOT).as_posix()
 
 
 def parse_player_stats(stats_data, factions):
@@ -49,7 +144,14 @@ def parse_player_stats(stats_data, factions):
                     "stats": player.get("player_stats", {}),
                 }
                 if avatar:
-                    saved_player["avatar"] = avatar
+                    try:
+                        saved_player["avatar"] = download_avatar(
+                            avatar, player_id or saved_player["nickname"]
+                        )
+                    except (RuntimeError, ValueError) as error:
+                        print(
+                            f"⚠️ 选手 {saved_player['nickname']} 头像快照保存失败：{error}"
+                        )
                 players.append(saved_player)
             teams.append({"name": team_name, "players": players})
 

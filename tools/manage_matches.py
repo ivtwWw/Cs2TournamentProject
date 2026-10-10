@@ -6,6 +6,7 @@ import tempfile
 from tools.faceit_sync import (
     JSON_FILE,
     combine_bo3_matches,
+    download_avatar,
     extract_match_id,
     fetch_faceit_match,
 )
@@ -312,6 +313,22 @@ def find_champion_players(series):
     return champion, list(players.values())
 
 
+def snapshot_avatar(avatar, player_id):
+    if avatar.startswith(("http://", "https://")):
+        return download_avatar(avatar, player_id)
+    if not avatar:
+        return ""
+    if re.fullmatch(
+        r"assets/images/players/[A-Za-z0-9_-]+\.(?:jpg|png|gif|webp)",
+        avatar,
+        re.I,
+    ):
+        return avatar
+    raise ValueError(
+        "头像必须是 FACEIT CDN HTTPS 图片 URL，或已保存的本地头像路径。"
+    )
+
+
 def edit_series_awards():
     store = load_store()
     display_series(store)
@@ -338,23 +355,42 @@ def edit_series_awards():
         champion, players = find_champion_players(series)
 
     captain = dict(current_captain)
-    for key, label in (("nickname", "队长昵称"), ("playerId", "队长 FACEIT ID"), ("avatar", "队长头像 URL")):
+    for key, label in (
+        ("nickname", "队长昵称"),
+        ("playerId", "队长 FACEIT ID"),
+        ("avatar", "队长头像（FACEIT CDN 图片 URL）"),
+    ):
         value = input(f"{label} [{captain.get(key, '')}]：").strip()
         if value:
-            captain[key] = value
+            captain[key] = (
+                snapshot_avatar(
+                    value, captain.get("playerId") or captain.get("nickname")
+                )
+                if key == "avatar"
+                else value
+            )
     if any(captain.values()):
         series["captain"] = captain
 
     mvp = dict(current_mvp)
-    for key, label in (("nickname", "MVP 昵称"), ("playerId", "MVP FACEIT ID"), ("rating", "赛事总 Rating"), ("avatar", "MVP 头像 URL")):
+    for key, label in (
+        ("nickname", "MVP 昵称"),
+        ("playerId", "MVP FACEIT ID"),
+        ("rating", "赛事总 Rating"),
+        ("avatar", "MVP 头像（FACEIT CDN 图片 URL）"),
+    ):
         value = input(f"{label} [{mvp.get(key, '')}]：").strip()
         if value:
-            mvp[key] = value
+            mvp[key] = (
+                snapshot_avatar(value, mvp.get("playerId") or mvp.get("nickname"))
+                if key == "avatar"
+                else value
+            )
     if any(mvp.values()):
         series["mvp"] = mvp
 
     if players:
-        print("\n冠军队选手头像（FACEIT 选手资料页可复制头像图片地址；留空保留现值）：")
+        print("\n冠军队选手头像（输入 FACEIT CDN 图片 URL；留空保留现值）：")
         saved_players = {
             player.get("playerId") or player.get("nickname"): player
             for player in series.get("championPlayers", [])
@@ -363,10 +399,17 @@ def edit_series_awards():
             key = player.get("playerId") or player.get("nickname")
             existing = saved_players.get(key, player)
             print(f"- {player['nickname']} | ID: {player['playerId'] or '未记录'}")
-            avatar = input(f"  头像 URL [{existing.get('avatar', '')}]：").strip()
+            avatar = input(f"  头像图片 URL [{existing.get('avatar', '')}]：").strip()
+            saved_avatar = (
+                snapshot_avatar(
+                    avatar, player.get("playerId") or player.get("nickname")
+                )
+                if avatar
+                else existing.get("avatar", "")
+            )
             saved_players[key] = {
                 **player,
-                "avatar": avatar or existing.get("avatar", ""),
+                "avatar": saved_avatar,
             }
         series["championPlayers"] = list(saved_players.values())
 
