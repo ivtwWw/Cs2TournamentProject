@@ -506,6 +506,23 @@ h2 {
     padding: 0;
 }
 
+.registration-cta {
+    background: #ff5500;
+    border-radius: 4px;
+    color: #fff;
+    display: inline-block;
+    font-weight: 700;
+    margin-top: 18px;
+    padding: 10px 18px;
+    text-decoration: none;
+    transition: background-color 0.2s;
+}
+
+.registration-cta:hover,
+.registration-cta:focus-visible {
+    background: #cc4400;
+}
+
 .series-page-stats {
     align-items: baseline;
     color: #999;

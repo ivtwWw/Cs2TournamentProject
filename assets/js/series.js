@@ -303,6 +303,9 @@ document.addEventListener("DOMContentLoaded", () => {
                         <span>${matches.length}</span>
                         <span>场比赛</span>
                     </div>
+                    ${series.status === 'upcoming'
+                        ? '<a class="registration-cta" href="registration.html">查看报名方式 →</a>'
+                        : ''}
                 </section>
                 ${series.status === 'completed' ? renderChampionDetails(series, matches, finalMatch) : ''}
                 <section>
