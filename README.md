@@ -42,6 +42,7 @@ cs2MatchSite/
 │       ├── 📄 script.js          # Home and archive series cards
 │       ├── 📄 series.js          # Edition page and awards rendering
 │       ├── 📄 match.js           # Match details and statistics
+│       ├── 📄 navigation.js      # Responsive navigation menu
 │       └── 📄 about.js           # Markdown content rendering
 ├── 📁 data/
 │   └── 📄 matches.json           # Editions, match results, and player statistics

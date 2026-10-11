@@ -27,6 +27,9 @@ header {
     background-color: #1e1e1e;
     border-bottom: 2px solid #ff5500; /* 亮橙色点缀 */
     padding: 15px 0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
 }
 
 header .container {
@@ -108,6 +111,14 @@ header .site-title {
     .brand-full {
         transition: none;
     }
+}
+
+.mobile-nav {
+    display: contents;
+}
+
+.mobile-nav-toggle {
+    display: none;
 }
 
 header nav {
@@ -385,6 +396,27 @@ h2 {
 }
 
 .series-card-footer span {
+    color: #ff5500;
+}
+
+.history-more-link {
+    color: #ff9a52;
+    display: block;
+    font-weight: 700;
+    margin: 12px auto 0 0;
+    padding: 8px 14px;
+    border: 1px solid rgba(255, 154, 82, 0.45);
+    border-radius: 6px;
+    background: rgba(30, 30, 30, 0.88);
+    text-decoration: none;
+    width: fit-content;
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.history-more-link:hover,
+.history-more-link:focus-visible {
+    background: rgba(255, 85, 0, 0.16);
+    border-color: #ff5500;
     color: #ff5500;
 }
 
@@ -795,16 +827,89 @@ th {
 
 @media (max-width: 700px) {
     header .container {
-        align-items: flex-start;
-        flex-direction: column;
+        align-items: center;
+        flex-direction: row;
         gap: 12px;
         padding: 0;
     }
 
-    header nav {
-        flex-wrap: wrap;
-        gap: 14px;
-        padding-bottom: 4px;
+    .brand-title {
+        min-width: 0;
+    }
+
+    .mobile-nav {
+        display: block;
+        flex-shrink: 0;
+        position: relative;
+    }
+
+    .mobile-nav-toggle {
+        align-items: center;
+        background: #292929;
+        border: 1px solid #444;
+        border-radius: 6px;
+        color: #fff;
+        cursor: pointer;
+        display: flex;
+        font: inherit;
+        font-weight: 700;
+        justify-content: center;
+        min-height: 44px;
+        min-width: 44px;
+        padding: 10px;
+    }
+
+    .mobile-nav-toggle:hover,
+    .mobile-nav-toggle:focus-visible,
+    .mobile-nav-toggle[aria-expanded="true"] {
+        border-color: #ff5500;
+        color: #ff9a52;
+    }
+
+    .mobile-nav-icon {
+        display: grid;
+        gap: 4px;
+        width: 18px;
+    }
+
+    .mobile-nav-icon span {
+        background: currentColor;
+        border-radius: 2px;
+        height: 2px;
+        width: 100%;
+    }
+
+    .mobile-nav nav {
+        background: #1e1e1e;
+        border: 1px solid #444;
+        border-radius: 6px;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
+        display: none;
+        flex-direction: column;
+        gap: 0;
+        min-width: 180px;
+        padding: 6px;
+        position: absolute;
+        right: 0;
+        top: calc(100% + 10px);
+        z-index: 20;
+    }
+
+    .mobile-nav.is-open nav {
+        display: flex;
+    }
+
+    .mobile-nav nav a {
+        align-items: center;
+        border-radius: 4px;
+        display: flex;
+        min-height: 44px;
+        padding: 8px 12px;
+    }
+
+    .mobile-nav nav a[aria-current="page"] {
+        background: #292929;
+        color: #ff9a52;
     }
 
     .home-hero {

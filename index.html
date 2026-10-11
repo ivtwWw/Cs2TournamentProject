@@ -15,12 +15,17 @@
                     <span class="brand-full">Aussie Laozi TV</span>
                 </h1>
             </a>
-            <nav>
-                <a href="history.html">历届赛事</a>
-                <a href="registration.html">报名方式</a>
-                <a href="about.html">关于我们</a>
-                <a href="faq.html">FAQ</a>
-            </nav>
+            <div class="mobile-nav">
+                <button class="mobile-nav-toggle" type="button" aria-label="打开导航菜单" aria-expanded="false" aria-controls="site-navigation">
+                    <span class="mobile-nav-icon" aria-hidden="true"><span></span><span></span><span></span></span>
+                </button>
+                <nav id="site-navigation">
+                    <a href="history.html">历届赛事</a>
+                    <a href="registration.html">报名方式</a>
+                    <a href="about.html">关于我们</a>
+                    <a href="faq.html">FAQ</a>
+                </nav>
+            </div>
         </div>
     </header>
 
@@ -45,6 +50,7 @@
             <div id="series-list" class="series-grid" data-series-limit="1">
                 <p class="loading">正在加载赛事届次...</p>
             </div>
+            <a class="history-more-link" href="history.html">查看更多历届赛事 →</a>
         </section>
 
         <section id="hall-of-fame">
@@ -56,5 +62,6 @@
     </main>
 
     <script src="assets/js/script.js"></script>
+    <script src="assets/js/navigation.js"></script>
 </body>
 </html>
