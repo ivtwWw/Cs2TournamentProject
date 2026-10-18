@@ -146,6 +146,22 @@ document.addEventListener("DOMContentLoaded", () => {
         `;
     };
 
+    const renderForfeitResult = (match) => {
+        const [teamAScore, teamBScore] = splitScore(match.score);
+        return `
+            <section class="series-score card">
+                <div class="series-team ${match.winner === match.teamA ? 'winner' : ''}">${escapeHtml(match.teamA)}</div>
+                <div class="series-score-center">
+                    <span class="series-format">${escapeHtml(match.format || '比赛')}</span>
+                    <strong>${escapeHtml(teamAScore)} <i>:</i> ${escapeHtml(teamBScore)}</strong>
+                    <span class="series-status">${escapeHtml(match.stage)}</span>
+                </div>
+                <div class="series-team ${match.winner === match.teamB ? 'winner' : ''}">${escapeHtml(match.teamB)}</div>
+            </section>
+            <p class="forfeit-note card">${escapeHtml(match.resultNote)}</p>
+        `;
+    };
+
     const renderMap = (match, map, index) => {
         const mapName = map.name || `地图 ${index + 1}`;
         let [scoreA, scoreB] = splitScore(map.score);
@@ -226,6 +242,19 @@ document.addEventListener("DOMContentLoaded", () => {
             const backUrl = series
                 ? `series.html?id=${encodeURIComponent(series.id)}`
                 : 'history.html';
+
+            if (match.resultNote) {
+                container.innerHTML = `
+                    <a class="back-link" href="${backUrl}">← 返回赛事</a>
+                    <div class="match-heading">
+                        <p class="match-stage">${escapeHtml(match.stage)}</p>
+                        <p>${escapeHtml(match.info || match.map || '')}</p>
+                        ${faceitLink}
+                    </div>
+                    ${renderForfeitResult(match)}
+                `;
+                return;
+            }
 
             if (!isSeries) {
                 const singleMap = maps[0] || {

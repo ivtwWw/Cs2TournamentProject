@@ -61,6 +61,68 @@ def match_entries(store):
     ]
 
 
+def series_phases(series):
+    phases = series.get("phases")
+    if isinstance(phases, list) and phases:
+        return phases
+    return [{"id": "knockout", "name": "淘汰赛"}]
+
+
+def choose_bracket_position(phase):
+    bracket = phase.get("bracket", {})
+    sections = bracket.get("sections", [])
+    if not sections:
+        return None
+
+    print("\n选择比赛所在分支：")
+    for index, section in enumerate(sections, start=1):
+        print(f"{index}. {section['name']}")
+    section_selection = input("请选择分支编号：").strip()
+    if not section_selection.isdigit() or not 1 <= int(section_selection) <= len(sections):
+        print("分支编号无效，没有添加比赛。")
+        return False
+    section = sections[int(section_selection) - 1]
+
+    rounds = section.get("rounds", [])
+    if not rounds:
+        print("该分支没有配置轮次，没有添加比赛。")
+        return False
+    print("\n选择比赛轮次：")
+    for index, round_info in enumerate(rounds, start=1):
+        print(f"{index}. {round_info['name']}")
+    round_selection = input("请选择轮次编号：").strip()
+    if not round_selection.isdigit() or not 1 <= int(round_selection) <= len(rounds):
+        print("轮次编号无效，没有添加比赛。")
+        return False
+    round_info = rounds[int(round_selection) - 1]
+
+    match_count = round_info.get("matchCount", 1)
+    print(f"\n该轮有 {match_count} 场比赛。")
+    match_selection = input(f"请输入场次序号（1-{match_count}）：").strip()
+    if not match_selection.isdigit() or not 1 <= int(match_selection) <= match_count:
+        print("场次序号无效，没有添加比赛。")
+        return False
+
+    section_name = section["name"]
+    round_name = round_info["name"]
+    stage = round_name if section_name == round_name else f"{section_name} · {round_name}"
+    return {
+        "bracketRoundId": round_info["id"],
+        "bracketMatchNumber": int(match_selection),
+        "stage": f"{stage} · 第{match_selection}场",
+    }
+
+
+def match_phase_id(series, match):
+    phases = series_phases(series)
+    phase_ids = {phase["id"] for phase in phases}
+    if match.get("phaseId") in phase_ids:
+        return match["phaseId"]
+    if "knockout" in phase_ids:
+        return "knockout"
+    return phases[0]["id"]
+
+
 def display_series(store):
     if not store["series"]:
         print("\n目前没有系列赛。")
@@ -85,6 +147,7 @@ def display_matches(store):
     for index, (series, match) in enumerate(entries, start=1):
         print(
             f"{index}. [{series.get('title', '未命名届次')}] "
+            f"[{next(phase['name'] for phase in series_phases(series) if phase['id'] == match_phase_id(series, match))}] "
             f"{match.get('stage', '未命名赛事')} | "
             f"{match.get('teamA', '未知队伍')} {match.get('score', '-')} "
             f"{match.get('teamB', '未知队伍')} "
@@ -130,17 +193,74 @@ def collect_map_match(match_id):
     return match
 
 
+def confirm_forfeit_result(match):
+    if (
+        match.get("winner") in (match.get("teamA"), match.get("teamB"))
+        and match.get("score") != "未出结果"
+    ):
+        return True
+
+    confirm = input(
+        "这场比赛尚无结果，是否确认为一方弃权、另一方轮空？(y/N)："
+    ).strip().lower()
+    if confirm != "y":
+        return True
+
+    print(f"1. {match['teamA']} 获胜")
+    print(f"2. {match['teamB']} 获胜")
+    winner_selection = input("请选择弃权后获胜的一方：").strip()
+    if winner_selection == "1":
+        winner = match["teamA"]
+    elif winner_selection == "2":
+        winner = match["teamB"]
+    else:
+        print("胜方编号无效，没有添加比赛。")
+        return False
+
+    format_selection = input(
+        "请选择比赛赛制：1=BO1（记 1 : 0），3=BO3（记 2 : 0）："
+    ).strip()
+    if format_selection not in ("1", "3"):
+        print("赛制编号无效，没有添加比赛。")
+        return False
+
+    winner_score = "1" if format_selection == "1" else "2"
+    loser_score = "0"
+    if winner == match["teamA"]:
+        match["score"] = f"{winner_score} : {loser_score}"
+    else:
+        match["score"] = f"{loser_score} : {winner_score}"
+    match["winner"] = winner
+    match["format"] = "BO1" if format_selection == "1" else "BO3"
+    match["resultNote"] = "因弃权导致轮空"
+    match["info"] = "因弃权导致轮空"
+    match["maps"] = []
+    match["details"] = {"teams": [], "maps": []}
+    return True
+
+
 def add_match():
     if not os.environ.get("FACEIT_API_KEY"):
         print("请先设置 FACEIT_API_KEY 环境变量，再录入 FACEIT 比赛。")
         return
 
-    match_type = input(
+    match_type_input = input(
         "录入方式：1=单个 FACEIT 链接（自动识别 BO1/BO3），"
         "3=多个地图链接手动合并为 BO3："
     ).strip()
+    match_url = None
+    if match_type_input.startswith("1-") and match_type_input[2:].strip():
+        match_type = "1"
+        match_url = match_type_input[2:].strip()
+    elif match_type_input.startswith("1 ") and match_type_input[2:].strip():
+        match_type = "1"
+        match_url = match_type_input[2:].strip()
+    else:
+        match_type = match_type_input
+
     if match_type == "1":
-        match_url = input("粘贴 FACEIT 比赛链接或 Match ID：").strip()
+        if match_url is None:
+            match_url = input("粘贴 FACEIT 比赛链接或 Match ID：").strip()
         new_match = collect_map_match(match_url)
     elif match_type == "3":
         raw_ids = input(
@@ -160,17 +280,10 @@ def add_match():
                 return
         new_match = combine_bo3_matches(map_matches)
     else:
-        print("类型无效，没有录入数据。")
+        print("录入方式无效，请输入 1 或 3；没有录入数据。")
         return
 
-    new_match["stage"] = input("请输入赛事阶段/名称：").strip() or "新比赛"
-    print(
-        f"\n待添加：{new_match['stage']} | {new_match['teamA']} "
-        f"{new_match['score']} {new_match['teamB']} "
-        f"({new_match.get('format', 'BO1')})"
-    )
-    if input("确认添加到比赛列表？(y/N)：").strip().lower() != "y":
-        print("已取消，比赛记录未更改。")
+    if not confirm_forfeit_result(new_match):
         return
 
     store = load_store()
@@ -192,6 +305,42 @@ def add_match():
     if new_match.get("id") in existing_ids:
         print("这场比赛已存在（Match ID 重复），未添加。")
         return
+    phases = series_phases(selected_series)
+    print("\n选择比赛所属阶段：")
+    for index, phase in enumerate(phases, start=1):
+        print(f"{index}. {phase['name']}")
+    phase_selection = input("请选择阶段编号：").strip()
+    if not phase_selection.isdigit() or not 1 <= int(phase_selection) <= len(phases):
+        print("阶段编号无效，没有添加比赛。")
+        return
+    selected_phase = phases[int(phase_selection) - 1]
+    new_match["phaseId"] = selected_phase["id"]
+    bracket_position = choose_bracket_position(selected_phase)
+    if bracket_position is False:
+        return
+    if bracket_position:
+        slot_taken = any(
+            match_phase_id(selected_series, match) == selected_phase["id"]
+            and match.get("bracketRoundId") == bracket_position["bracketRoundId"]
+            and match.get("bracketMatchNumber") == bracket_position["bracketMatchNumber"]
+            for match in selected_series["matches"]
+        )
+        if slot_taken:
+            print("该轮次场次已存在比赛，没有添加重复对阵。")
+            return
+        new_match.update(bracket_position)
+    else:
+        new_match["stage"] = selected_phase["name"]
+
+    print(
+        f"\n待添加：{new_match['stage']} | {new_match['teamA']} "
+        f"{new_match['score']} {new_match['teamB']} "
+        f"({new_match.get('format', 'BO1')})"
+    )
+    if input("确认添加到比赛列表？(y/N)：").strip().lower() != "y":
+        print("已取消，比赛记录未更改。")
+        return
+
     selected_series["matches"].insert(0, new_match)
     if selected_series.get("status") == "upcoming":
         selected_series["status"] = "active"
@@ -211,6 +360,10 @@ def add_series():
         print("标题不能为空，没有创建系列赛。")
         return
     description = input("系列赛简介（可留空）：").strip()
+    phase_names = input("赛事阶段（用分号分隔，留空默认“淘汰赛”）：").strip()
+    phase_names = list(dict.fromkeys(
+        name.strip() for name in phase_names.split(";") if name.strip()
+    )) or ["淘汰赛"]
     status = input("状态：1=即将开始，2=进行中，3=已结束 [1/2/3]：").strip()
     status_values = {"1": "upcoming", "2": "active", "3": "completed"}
     if status not in status_values:
@@ -222,6 +375,10 @@ def add_series():
         "title": title,
         "status": status_values[status],
         "description": description,
+        "phases": [
+            {"id": f"phase-{index}", "name": name}
+            for index, name in enumerate(phase_names, start=1)
+        ],
         "matches": [],
     })
     save_store(store)

@@ -270,24 +270,219 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const matches = [...(series.matches || [])]
                 .sort((first, second) => stageOrder(first.stage) - stageOrder(second.stage));
+            const phases = Array.isArray(series.phases) && series.phases.length
+                ? series.phases
+                : [{ id: 'knockout', name: '淘汰赛' }];
+            const getMatchPhaseId = (match) => {
+                if (phases.some((phase) => phase.id === match.phaseId)) return match.phaseId;
+                return phases.some((phase) => phase.id === 'knockout')
+                    ? 'knockout'
+                    : phases[0].id;
+            };
             const finalMatch = getFinalMatch(matches);
             const description = series.eventTime || series.schedule
                 ? series.title
                 : series.description || '';
-            const matchCards = matches.map((match) => `
-                <a class="card match-result match-link" href="match.html?id=${encodeURIComponent(match.id)}&series=${encodeURIComponent(series.id)}">
-                    <div class="match-info">
-                        <h3>${escapeHtml(match.stage)}</h3>
-                        ${renderMapList(match)}
-                    </div>
-                    <div class="score-board">
-                        <span class="score-team score-team-a ${match.winner === match.teamA ? 'winner' : ''}">${escapeHtml(match.teamA)}</span>
-                        <span class="score">${escapeHtml(match.score)}</span>
-                        <span class="score-team score-team-b ${match.winner === match.teamB ? 'winner' : ''}">${escapeHtml(match.teamB)}</span>
-                    </div>
-                    <span class="details-hint">查看详情 →</span>
-                </a>
-            `).join('');
+            const renderMatchCards = (phaseId, selectedMatches) => {
+                const phaseMatches = selectedMatches || matches.filter(
+                    (match) => getMatchPhaseId(match) === phaseId
+                );
+                const cards = phaseMatches.map((match) => `
+                    <a class="card match-result match-link" href="match.html?id=${encodeURIComponent(match.id)}&series=${encodeURIComponent(series.id)}">
+                        <div class="match-info">
+                            <h3>${escapeHtml(match.stage)}</h3>
+                            ${renderMapList(match)}
+                        </div>
+                        <div class="score-board">
+                            <span class="score-team score-team-a ${match.winner === match.teamA ? 'winner' : ''}">${escapeHtml(match.teamA)}</span>
+                            <span class="score">${escapeHtml(match.score)}</span>
+                            <span class="score-team score-team-b ${match.winner === match.teamB ? 'winner' : ''}">${escapeHtml(match.teamB)}</span>
+                        </div>
+                        <span class="details-hint">查看详情 →</span>
+                    </a>
+                `).join('');
+                return cards || '<p class="empty-state">该阶段尚未添加比赛。</p>';
+            };
+            const renderBracket = (phase) => {
+                const bracket = phase.bracket;
+                if (!Array.isArray(bracket?.sections) || !bracket.sections.length) {
+                    return renderMatchCards(phase.id);
+                }
+
+                const phaseMatches = matches.filter((match) => getMatchPhaseId(match) === phase.id);
+                const description = phase.description
+                    ? `<p class="bracket-description">${escapeHtml(phase.description)}</p>`
+                    : '';
+                const renderedMatchIds = new Set();
+                const sections = bracket.sections.map((section) => {
+                    const mainRounds = section.rounds.filter((round) => round.placement !== 'below');
+                    const thirdPlaceRounds = section.rounds.filter((round) => round.placement === 'below');
+                    const rowCount = Math.max(
+                        1,
+                        ...mainRounds.map((round) => (round.matchCount || 1) * 2 - 1)
+                    );
+                    const rounds = mainRounds.map((round, roundIndex) => {
+                        const roundMatches = phaseMatches.filter(
+                            (match) => match.bracketRoundId === round.id
+                        );
+                        const matchSlots = Array.from(
+                            { length: round.matchCount || roundMatches.length || 1 },
+                            (_, index) => index + 1
+                        );
+                        const cards = matchSlots.map((matchNumber) => {
+                            const rowStart = Math.round(
+                                (matchNumber - 0.5) * rowCount / matchSlots.length + 0.5
+                            );
+                            const match = roundMatches.find(
+                                (item) => Number(item.bracketMatchNumber) === matchNumber
+                            );
+                            if (!match) {
+                                return `
+                                    <div class="bracket-match-card is-pending" data-match-slot="${matchNumber}" style="grid-row-start:${rowStart}" aria-label="${escapeHtml(round.name)}第${matchNumber}场待定">
+                                        <span class="bracket-match-number">第${matchNumber}场</span>
+                                        <span class="bracket-team-row"><span>待定</span><strong>—</strong></span>
+                                        <span class="bracket-team-row"><span>待定</span><strong>—</strong></span>
+                                    </div>
+                                `;
+                            }
+
+                            renderedMatchIds.add(match.id);
+                            const scores = String(match.score || '').split(/\s*[-/:]\s*/);
+                            const [scoreA, scoreB] = scores.length === 2 ? scores : [match.score || '—', '—'];
+                            const url = `match.html?id=${encodeURIComponent(match.id)}&series=${encodeURIComponent(series.id)}`;
+                            return `
+                                <a class="bracket-match-card" data-match-slot="${matchNumber}" style="grid-row-start:${rowStart}" href="${url}">
+                                    <span class="bracket-match-number">
+                                        <span>第${matchNumber}场 · ${escapeHtml(match.format || '比赛')}</span>
+                                        ${match.resultNote ? '<span class="bracket-forfeit-tag">轮空</span>' : ''}
+                                    </span>
+                                    <span class="bracket-team-row${match.winner === match.teamA ? ' winner' : ''}">
+                                        <span>${escapeHtml(match.teamA)}</span><strong>${escapeHtml(scoreA)}</strong>
+                                    </span>
+                                    <span class="bracket-team-row${match.winner === match.teamB ? ' winner' : ''}">
+                                        <span>${escapeHtml(match.teamB)}</span><strong>${escapeHtml(scoreB)}</strong>
+                                    </span>
+                                </a>
+                            `;
+                        }).join('');
+                        return `
+                            <section class="bracket-round" data-tree="${bracket.type === 'single-elimination'}">
+                                <h4>${escapeHtml(round.name)}</h4>
+                                <div class="bracket-round-matches" style="--bracket-rows:${rowCount}">${cards}</div>
+                            </section>
+                        `;
+                    }).join('');
+                    const thirdPlace = thirdPlaceRounds.map((round) => {
+                        const match = phaseMatches.find((item) => item.bracketRoundId === round.id);
+                        if (!match) {
+                            return `<div class="bracket-match-card is-pending">
+                                <span class="bracket-team-row"><span>待定</span><strong>—</strong></span>
+                                <span class="bracket-team-row"><span>待定</span><strong>—</strong></span>
+                            </div>`;
+                        }
+                        renderedMatchIds.add(match.id);
+                        const scores = String(match.score || '').split(/\s*[-/:]\s*/);
+                        const [scoreA, scoreB] = scores.length === 2 ? scores : [match.score || '—', '—'];
+                        return `<a class="bracket-match-card" href="match.html?id=${encodeURIComponent(match.id)}&series=${encodeURIComponent(series.id)}">
+                            <span class="bracket-match-number">
+                                <span>${escapeHtml(round.name)} · ${escapeHtml(match.format || '比赛')}</span>
+                                ${match.resultNote ? '<span class="bracket-forfeit-tag">轮空</span>' : ''}
+                            </span>
+                            <span class="bracket-team-row${match.winner === match.teamA ? ' winner' : ''}"><span>${escapeHtml(match.teamA)}</span><strong>${escapeHtml(scoreA)}</strong></span>
+                            <span class="bracket-team-row${match.winner === match.teamB ? ' winner' : ''}"><span>${escapeHtml(match.teamB)}</span><strong>${escapeHtml(scoreB)}</strong></span>
+                        </a>`;
+                    }).join('');
+                    return `
+                        <section class="bracket-section">
+                            <h3>${escapeHtml(section.name)}</h3>
+                            <div class="bracket-rounds" data-bracket-tree="${['single-elimination', 'double-elimination'].includes(bracket.type)}">${rounds}</div>
+                            ${thirdPlaceRounds.length
+                                ? `<section class="bracket-third-place"><h4>季军赛</h4>${thirdPlace}</section>`
+                                : ''}
+                        </section>
+                    `;
+                }).join('');
+
+                const unassignedMatches = phaseMatches.filter(
+                    (match) => !renderedMatchIds.has(match.id)
+                );
+                const unassigned = unassignedMatches.length
+                    ? `<section class="bracket-unassigned"><h3>未归入轮次</h3>${renderMatchCards(phase.id, unassignedMatches)}</section>`
+                    : '';
+                return `<div class="tournament-bracket">${description}${sections}${unassigned}</div>`;
+            };
+            const drawBracketConnectors = () => {
+                container.querySelectorAll('.bracket-rounds[data-bracket-tree="true"]').forEach((rounds) => {
+                    rounds.querySelectorAll('.bracket-connectors').forEach((svg) => svg.remove());
+                    const columns = [...rounds.querySelectorAll('.bracket-round')];
+                    const connections = [];
+                    columns.slice(1).forEach((column, index) => {
+                        const previous = columns[index];
+                        const previousCount = previous.querySelectorAll('.bracket-match-card').length;
+                        const nextCards = [...column.querySelectorAll('.bracket-match-card')];
+                        if (previousCount === nextCards.length * 2) {
+                            nextCards.forEach((nextCard, nextIndex) => {
+                                const first = previous.querySelector(`[data-match-slot="${nextIndex * 2 + 1}"]`);
+                                const second = previous.querySelector(`[data-match-slot="${nextIndex * 2 + 2}"]`);
+                                if (first && second) connections.push([first, second, nextCard]);
+                            });
+                        } else if (previousCount === nextCards.length) {
+                            nextCards.forEach((nextCard, nextIndex) => {
+                                const previousCard = previous.querySelector(`[data-match-slot="${nextIndex + 1}"]`);
+                                if (previousCard) connections.push([previousCard, null, nextCard]);
+                            });
+                        }
+                    });
+                    if (!connections.length) return;
+
+                    const bounds = rounds.getBoundingClientRect();
+                    const contentWidth = Math.max(bounds.width, rounds.scrollWidth);
+                    const contentHeight = Math.max(bounds.height, rounds.scrollHeight);
+                    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                    svg.setAttribute('class', 'bracket-connectors');
+                    svg.setAttribute('width', String(contentWidth));
+                    svg.setAttribute('height', String(contentHeight));
+                    svg.setAttribute('viewBox', `0 0 ${contentWidth} ${contentHeight}`);
+                    connections.forEach(([first, second, next]) => {
+                        const rects = [first, second, next]
+                            .map((item) => item?.getBoundingClientRect() || null);
+                        const xStart = rects[0].right - bounds.left + rounds.scrollLeft;
+                        const xEnd = rects[2].left - bounds.left + rounds.scrollLeft;
+                        const yFirst = (rects[0].top + rects[0].bottom) / 2 - bounds.top + rounds.scrollTop;
+                        const yNext = (rects[2].top + rects[2].bottom) / 2 - bounds.top + rounds.scrollTop;
+                        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                        if (rects[1]) {
+                            const branchX = (xStart + xEnd) / 2;
+                            const ySecond = (rects[1].top + rects[1].bottom) / 2 - bounds.top + rounds.scrollTop;
+                            path.setAttribute(
+                                'd',
+                                `M ${xStart} ${yFirst} H ${branchX} V ${ySecond} `
+                                + `M ${xStart} ${ySecond} H ${branchX} `
+                                + `M ${branchX} ${yNext} H ${xEnd}`
+                            );
+                        } else {
+                            path.setAttribute('d', `M ${xStart} ${yFirst} H ${xEnd}`);
+                        }
+                        path.setAttribute('fill', 'none');
+                        path.setAttribute('stroke', '#555');
+                        path.setAttribute('stroke-width', '2');
+                        svg.appendChild(path);
+                    });
+                    rounds.prepend(svg);
+                });
+            };
+            const phaseSelector = `
+                <div class="series-phase-selector" role="group" aria-label="选择赛事阶段">
+                    ${phases.map((phase) => {
+                        const count = matches.filter((match) => getMatchPhaseId(match) === phase.id).length;
+                        return `<button class="series-phase-button${phase === phases[0] ? ' is-active' : ''}"
+                            type="button" data-phase-id="${escapeHtml(phase.id)}"
+                            aria-pressed="${phase === phases[0]}">
+                            <span>${escapeHtml(phase.name)}</span>
+                            <small>${count} 场比赛</small>
+                        </button>`;
+                    }).join('')}
+                </div>`;
 
             container.innerHTML = `
                 <a class="back-link" href="history.html">← 返回历届赛事</a>
@@ -309,10 +504,34 @@ document.addEventListener("DOMContentLoaded", () => {
                 </section>
                 ${series.status === 'completed' ? renderChampionDetails(series, matches, finalMatch) : ''}
                 <section>
-                    <h2>比赛列表</h2>
-                    ${matchCards || '<p class="empty-state">本届赛事尚未添加比赛。</p>'}
+                    <h2>赛事阶段</h2>
+                    ${phaseSelector}
+                    <div id="phase-match-list">${renderBracket(phases[0])}</div>
                 </section>
             `;
+
+            const phaseButtons = container.querySelectorAll('.series-phase-button');
+            const matchList = container.querySelector('#phase-match-list');
+            requestAnimationFrame(drawBracketConnectors);
+            container.querySelectorAll('.bracket-rounds[data-bracket-tree="true"]').forEach((rounds) => {
+                rounds.addEventListener('scroll', drawBracketConnectors, { passive: true });
+            });
+            phaseButtons.forEach((button) => {
+                button.addEventListener('click', () => {
+                    phaseButtons.forEach((phaseButton) => {
+                        const isActive = phaseButton === button;
+                        phaseButton.classList.toggle('is-active', isActive);
+                        phaseButton.setAttribute('aria-pressed', String(isActive));
+                    });
+                    const phase = phases.find((item) => item.id === button.dataset.phaseId);
+                    matchList.innerHTML = renderBracket(phase);
+                    requestAnimationFrame(drawBracketConnectors);
+                    matchList.querySelectorAll('.bracket-rounds[data-bracket-tree="true"]').forEach((rounds) => {
+                        rounds.addEventListener('scroll', drawBracketConnectors, { passive: true });
+                    });
+                });
+            });
+            window.addEventListener('resize', drawBracketConnectors);
             revealLoadedAvatars(container);
         })
         .catch((error) => {
